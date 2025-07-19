@@ -74,19 +74,18 @@ function App() {
     return unsubscribe
   }, [])
 
-  // Initialize database tables
+  // Load user spins when user changes
   useEffect(() => {
     const loadUserSpins = async () => {
       if (!user) return
       try {
         const today = new Date().toISOString().split('T')[0]
-        const result = await blink.db.sql(`
-          SELECT spins_today FROM user_spins 
-          WHERE user_id = ? AND last_spin_date = ?
-        `, [user.id, today])
+        const result = await blink.db.userSpins.list({
+          where: { userId: user.id, lastSpinDate: today }
+        })
 
         if (result.length > 0) {
-          setUserSpins(result[0].spins_today)
+          setUserSpins(result[0].spinsToday || 0)
         } else {
           setUserSpins(0)
         }
@@ -97,7 +96,6 @@ function App() {
     }
 
     if (user) {
-      initializeDatabase()
       loadUserSpins()
     }
   }, [user])
@@ -122,42 +120,7 @@ function App() {
     return () => clearInterval(interval)
   }, [])
 
-  const initializeDatabase = async () => {
-    try {
-      await blink.db.sql(`
-        CREATE TABLE IF NOT EXISTS spin_results (
-          id TEXT PRIMARY KEY,
-          user_id TEXT NOT NULL,
-          user_email TEXT NOT NULL,
-          prize_id INTEGER NOT NULL,
-          prize_name TEXT NOT NULL,
-          timestamp INTEGER NOT NULL,
-          created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-        )
-      `)
 
-      await blink.db.sql(`
-        CREATE TABLE IF NOT EXISTS user_spins (
-          user_id TEXT PRIMARY KEY,
-          spins_today INTEGER DEFAULT 0,
-          last_spin_date TEXT,
-          created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-        )
-      `)
-
-      await blink.db.sql(`
-        CREATE TABLE IF NOT EXISTS game_settings (
-          id INTEGER PRIMARY KEY DEFAULT 1,
-          pity_threshold INTEGER DEFAULT 25,
-          prizes_config TEXT,
-          daily_reset_time TEXT DEFAULT '00:00',
-          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-        )
-      `)
-    } catch (error) {
-      console.error('Database initialization error:', error)
-    }
-  }
 
 
 
@@ -172,16 +135,21 @@ function App() {
       const today = new Date().toISOString().split('T')[0]
 
       // Record the spin result
-      await blink.db.sql(`
-        INSERT INTO spin_results (id, user_id, user_email, prize_id, prize_name, timestamp)
-        VALUES (?, ?, ?, ?, ?, ?)
-      `, [spinId, user.id, user.email, prizeId, prize.name, Date.now()])
+      await blink.db.spinResults.create({
+        id: spinId,
+        userId: user.id,
+        userEmail: user.email,
+        prizeId: prizeId,
+        prizeName: prize.name,
+        timestamp: Date.now()
+      })
 
       // Update user spins
-      await blink.db.sql(`
-        INSERT OR REPLACE INTO user_spins (user_id, spins_today, last_spin_date)
-        VALUES (?, 1, ?)
-      `, [user.id, today])
+      await blink.db.userSpins.upsert({
+        userId: user.id,
+        spinsToday: 1,
+        lastSpinDate: today
+      })
 
       setUserSpins(1)
       setLastPrize(prize)

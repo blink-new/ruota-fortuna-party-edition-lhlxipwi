@@ -29,26 +29,19 @@ export function AdminPanel({ gameSettings, onSettingsChange, language }: AdminPa
     const loadAdminData = async () => {
       try {
         // Load recent spins
-        const spinsResult = await blink.db.sql(`
-          SELECT * FROM spin_results 
-          ORDER BY timestamp DESC 
-          LIMIT 50
-        `)
+        const spinsResult = await blink.db.spinResults.list({
+          orderBy: { timestamp: 'desc' },
+          limit: 50
+        })
         setRecentSpins(spinsResult)
 
         // Calculate prize statistics
-        const statsResult = await blink.db.sql(`
-          SELECT prize_id, prize_name, COUNT(*) as count
-          FROM spin_results 
-          GROUP BY prize_id, prize_name
-          ORDER BY prize_id
-        `)
-
+        const allSpins = await blink.db.spinResults.list()
         const statsData = gameSettings.prizes.map(prize => {
-          const stat = statsResult.find(s => s.prize_id === prize.id)
+          const count = allSpins.filter(spin => spin.prizeId === prize.id).length
           return {
             name: prize.name,
-            count: stat ? stat.count : 0,
+            count: count,
             weight: prize.weight,
             color: prize.color
           }
