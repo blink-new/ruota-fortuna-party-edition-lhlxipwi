@@ -1,0 +1,50 @@
+{
+  "it": {
+    "title": "Ruota della Fortuna",
+    "subtitle": "Party Edition",
+    "spinButton": "PAGA 2€ & SPIN",
+    "spinning": "GIRANDO...",
+    "recentResults": "Ultimi 10 Risultati",
+    "noResults": "Nessun risultato ancora",
+    "congratulations": "Congratulazioni!",
+    "youWon": "Hai vinto",
+    "close": "CHIUDI",
+    "rareBooster": "Rare Booster ACTIVE",
+    "totalSpins": "Spin Totali",
+    "expectedCost": "Costo Medio",
+    "prizes": {
+      "Moët": "Moët",
+      "Bottiglia Premium": "Bottiglia Premium", 
+      "Raddoppia l'ordine": "Raddoppia l'ordine",
+      "Vino": "Vino",
+      "Drink a scelta": "Drink a scelta",
+      "Spritz": "Spritz",
+      "Birra": "Birra",
+      "Miss": "Miss"
+    }
+  },
+  "en": {
+    "title": "Wheel of Fortune",
+    "subtitle": "Party Edition", 
+    "spinButton": "PAY 2€ & SPIN",
+    "spinning": "SPINNING...",
+    "recentResults": "Last 10 Results",
+    "noResults": "No results yet",
+    "congratulations": "Congratulations!",
+    "youWon": "You won",
+    "close": "CLOSE",
+    "rareBooster": "Rare Booster ACTIVE",
+    "totalSpins": "Total Spins",
+    "expectedCost": "Average Cost",
+    "prizes": {
+      "Moët": "Moët",
+      "Bottiglia Premium": "Premium Bottle",
+      "Raddoppia l'ordine": "Double Order", 
+      "Vino": "Wine",
+      "Drink a scelta": "Drink of Choice",
+      "Spritz": "Spritz",
+      "Birra": "Beer",
+      "Miss": "Miss"
+    }
+  }
+}

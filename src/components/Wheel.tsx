@@ -1,140 +1,141 @@
-import { useState, useRef } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { Button } from './ui/button'
-import { Prize } from '../App'
-import translations from '../data/translations.json'
+import { PRIZES } from '../utils/probabilityEngine'
 
 interface WheelProps {
-  prizes: Prize[]
-  onSpin: (prizeId: number) => void
+  onSpin: (prizeIndex: number) => void
   disabled: boolean
-  language: 'it' | 'en'
+  isSpinning: boolean
+  winningSegment: number | null
+  strings: any
+  selectedPrize?: any
 }
 
-export function Wheel({ prizes, onSpin, disabled, language }: WheelProps) {
-  const [isSpinning, setIsSpinning] = useState(false)
+export const Wheel: React.FC<WheelProps> = ({ 
+  onSpin, 
+  disabled, 
+  isSpinning, 
+  winningSegment,
+  strings,
+  selectedPrize
+}) => {
   const [rotation, setRotation] = useState(0)
   const wheelRef = useRef<HTMLDivElement>(null)
-  const t = translations[language]
-
+  
+  // Calculate segment angle (360° / 8 segments = 45°)
+  const segmentAngle = 360 / PRIZES.length
+  
+  // Animate wheel when a prize is selected
+  useEffect(() => {
+    if (selectedPrize && isSpinning) {
+      // Calculate target angle to align winning segment with pointer (12 o'clock)
+      // We want the CENTER of the winning segment to align with the pointer
+      const segmentCenter = selectedPrize.id * segmentAngle + (segmentAngle / 2)
+      const targetAngle = 360 - segmentCenter // Reverse because wheel spins clockwise
+      
+      // Add multiple full rotations for dramatic effect (3-5 full spins)
+      const fullRotations = 3 + Math.random() * 2
+      const finalRotation = rotation + (fullRotations * 360) + targetAngle
+      
+      setRotation(finalRotation)
+    }
+  }, [selectedPrize, isSpinning, rotation, segmentAngle])
+  
   const handleSpin = () => {
     if (disabled || isSpinning) return
-
-    setIsSpinning(true)
-
-    // Calculate weighted random selection
-    const totalWeight = prizes.reduce((sum, prize) => sum + prize.weight, 0)
-    let random = Math.random() * totalWeight
-    let selectedPrize = prizes[0]
-
-    for (const prize of prizes) {
-      random -= prize.weight
-      if (random <= 0) {
-        selectedPrize = prize
-        break
-      }
-    }
-
-    // Calculate rotation
-    const segmentAngle = 360 / prizes.length
-    const prizeIndex = prizes.findIndex(p => p.id === selectedPrize.id)
-    const targetAngle = prizeIndex * segmentAngle
-    const spins = 5 + Math.random() * 3 // 5-8 full rotations
-    const finalRotation = rotation + (spins * 360) + (360 - targetAngle)
-
-    setRotation(finalRotation)
-
-    // Complete spin after animation
-    setTimeout(() => {
-      setIsSpinning(false)
-      onSpin(selectedPrize.id)
-    }, 3000)
+    
+    // Call onSpin to trigger prize selection
+    onSpin(0) // The actual prize will be determined by the probability engine
   }
-
-  const segmentAngle = 360 / prizes.length
-
+  
   return (
     <div className="relative flex flex-col items-center">
-      {/* Wheel container */}
-      <div className="relative">
-        {/* Pointer */}
+      {/* Wheel Container */}
+      <div className="relative w-96 h-96 md:w-[500px] md:h-[500px]">
+        {/* Fixed Pointer */}
         <div className="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-2 z-20">
-          <div className="w-0 h-0 border-l-[20px] border-r-[20px] border-b-[40px] border-l-transparent border-r-transparent border-b-yellow-400 drop-shadow-lg"></div>
+          <div className="w-0 h-0 border-l-[20px] border-r-[20px] border-b-[40px] border-l-transparent border-r-transparent border-b-yellow-400 drop-shadow-lg" />
         </div>
-
-        {/* Wheel */}
+        
+        {/* Spinning Wheel */}
         <motion.div
           ref={wheelRef}
-          className="relative w-80 h-80 rounded-full border-8 border-yellow-400 shadow-2xl overflow-hidden"
+          className="w-full h-full rounded-full relative overflow-hidden shadow-2xl border-8 border-yellow-400"
           animate={{ rotate: rotation }}
           transition={{ 
-            duration: isSpinning ? 3 : 0,
-            ease: isSpinning ? "easeOut" : "linear"
+            duration: 3, 
+            ease: [0.25, 0.46, 0.45, 0.94] // Custom ease-out with slight bounce
           }}
         >
-          {prizes.map((prize, index) => {
+          {PRIZES.map((prize, index) => {
             const startAngle = index * segmentAngle
-            const endAngle = (index + 1) * segmentAngle
-            const midAngle = (startAngle + endAngle) / 2
+            const isWinning = winningSegment === index
             
             return (
               <div
                 key={prize.id}
-                className="absolute inset-0"
+                className={`absolute w-full h-full ${
+                  isWinning ? 'animate-pulse' : ''
+                }`}
                 style={{
-                  clipPath: `polygon(50% 50%, ${50 + 50 * Math.cos((startAngle - 90) * Math.PI / 180)}% ${50 + 50 * Math.sin((startAngle - 90) * Math.PI / 180)}%, ${50 + 50 * Math.cos((endAngle - 90) * Math.PI / 180)}% ${50 + 50 * Math.sin((endAngle - 90) * Math.PI / 180)}%)`,
-                  backgroundColor: prize.color,
+                  transform: `rotate(${startAngle}deg)`,
+                  transformOrigin: 'center'
                 }}
               >
-                {/* Prize content */}
+                {/* Segment Background */}
                 <div 
-                  className="absolute text-center text-white font-bold"
+                  className="absolute w-full h-full"
                   style={{
-                    top: '20%',
+                    background: `conic-gradient(from 0deg, ${prize.color} 0deg, ${prize.color} ${segmentAngle}deg, transparent ${segmentAngle}deg)`,
+                    clipPath: `polygon(50% 50%, 50% 0%, ${50 + 50 * Math.cos((segmentAngle * Math.PI) / 180)}% ${50 - 50 * Math.sin((segmentAngle * Math.PI) / 180)}%)`
+                  }}
+                />
+                
+                {/* Prize Content */}
+                <div 
+                  className="absolute flex flex-col items-center justify-center text-white font-bold"
+                  style={{
+                    top: '15%',
                     left: '50%',
-                    transform: `translate(-50%, -50%) rotate(${midAngle}deg)`,
-                    transformOrigin: '50% 200%'
+                    transform: 'translate(-50%, 0)',
+                    width: '80px',
+                    height: '120px'
                   }}
                 >
-                  <div className="text-2xl mb-1">{prize.icon}</div>
-                  <div className="text-xs px-1 leading-tight">
-                    {prize.name.split(' ').map((word, i) => (
-                      <div key={i}>{word}</div>
-                    ))}
+                  {/* Prize Icon */}
+                  <div className="text-4xl md:text-5xl mb-2 drop-shadow-lg">
+                    {prize.icon}
+                  </div>
+                  
+                  {/* Prize Name */}
+                  <div className="text-xs md:text-sm text-center leading-tight drop-shadow-lg font-bold">
+                    {strings.prizes[prize.name] || prize.name}
                   </div>
                 </div>
               </div>
             )
           })}
-
-          {/* Center circle */}
-          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-16 h-16 bg-slate-800 rounded-full border-4 border-yellow-400 flex items-center justify-center">
-            <div className="w-8 h-8 bg-yellow-400 rounded-full"></div>
+          
+          {/* Center Circle */}
+          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-16 h-16 bg-yellow-400 rounded-full border-4 border-white shadow-lg flex items-center justify-center">
+            <div className="w-8 h-8 bg-yellow-600 rounded-full" />
           </div>
         </motion.div>
       </div>
-
-      {/* Spin button */}
-      <Button
+      
+      {/* Spin Button */}
+      <motion.button
         onClick={handleSpin}
         disabled={disabled || isSpinning}
-        className="mt-8 bg-yellow-400 hover:bg-yellow-500 text-black font-orbitron font-bold text-xl px-12 py-6 rounded-full shadow-lg transform transition-all duration-200 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+        className={`mt-8 px-8 py-4 text-xl font-bold rounded-full border-4 transition-all duration-200 ${
+          disabled || isSpinning
+            ? 'bg-gray-500 border-gray-400 text-gray-300 cursor-not-allowed'
+            : 'bg-yellow-400 border-yellow-600 text-black hover:bg-yellow-500 hover:scale-105 active:scale-95 shadow-lg'
+        }`}
+        whileTap={{ scale: disabled || isSpinning ? 1 : 0.95 }}
       >
-        {isSpinning ? (
-          <div className="flex items-center gap-2">
-            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-black"></div>
-            {language === 'it' ? 'GIRANDO...' : 'SPINNING...'}
-          </div>
-        ) : (
-          t.spin
-        )}
-      </Button>
-
-      {disabled && !isSpinning && (
-        <p className="mt-4 text-slate-300 text-center">
-          {language === 'it' ? 'Hai già girato oggi!' : 'You have already spun today!'}
-        </p>
-      )}
+        {isSpinning ? strings.spinning : strings.spinButton}
+      </motion.button>
     </div>
   )
 }
